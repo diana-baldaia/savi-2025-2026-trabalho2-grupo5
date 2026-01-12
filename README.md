@@ -144,3 +144,61 @@ Posteriormente, são defenidos os datasets de treino e teste através da classe 
 Após isto realiza-se a verificação de integridade (Sanity Check), na qual o código executa um teste preliminar manual. Extrai-se uma única imagem do dataset e aplica-se a função unsqueeze(0). Este passo é essencial uma vez que as redes em PyTorch esperam receber dados em lotes com 4 dimensões (Batch, Canais, Altura, Largura), mas uma imagem isolada tem apenas 3. O unsqueeze adiciona artificialmente a dimensão do lote (tamanho 1). A imagem é passada pela função forward do modelo. Se este passo não gerar erros de dimensão ou memória, confirma-se que a arquitetura está compatível com os dados de entrada.
 
 Por fim, dá-se início à classe Trainer, recebendo os argumentos, os datasets e o modelo. O método trainer.train() é invocado para iniciar o loop de aprendizagem. Após a conclusão das épocas, o método trainer.evaluate() é chamado explicitamente para correr o modelo no conjunto de teste e gerar as métricas finais de desempenho (Precisão, Recall, F1-Score e Matriz de Confusão).
+
+### 3. Resultados
+Nesta secção, apresentam-se os resultados obtidos durante a fase de treino e teste. A análise foca-se sobretudo no desempenho do modelo final proposto (ModelBetterCNN), seguida de um estudo comparativo com os modelos iterativas anteriores para demonstrar a evolução do desempenho.
+
+#### 3.1 ModelBetterCNN
+O processo de treino foi monitorizado ao longo de 10 épocas. A figura abaixo ilustra a evolução da função de perda (Loss) nos conjuntos de treino e de teste.
+
+[Inserir aqui a imagem: training.png] Figura 1: Evolução do erro (Loss) durante as épocas de treino e teste.
+
+Observa-se uma convergência rápida e estável do modelo. O erro no conjunto de teste (linha azul) acompanha a descida do erro de treino (linha vermelha), estabilizando em valores próximos de zero. A ausência de uma divergência significativa entre as duas curvas indica que o modelo possui uma boa capacidade de generalização e que não ocorreu Overfitting significativo. O melhor modelo (indicado pela linha tracejada verde) foi obtido na época 8, onde o erro de teste atingiu o seu mínimo global.
+
+A avaliação final no conjunto de teste, detalhada na tabela seguinte, revela um ótimo desempenho da rede, alcançando uma exatidão (Accuracy) global de 99%.
+
+Classe (Dígito),Precision,Recall,F1-Score,Suporte
+        0,       0.99,     1.00,   0.99,     980
+        1,       1.00,     0.99,   1.00,    1135
+        2,       1.00,     0.99,   1.00,    1032
+        3,       0.99,     1.00,   0.99,    1010
+        4,       1.00,     0.99,   0.99,     982
+        5,       0.99,     0.99,   0.99,     892
+        6,       0.99,     0.99,   0.99,     958
+        7,       0.99,     0.99,   0.99,    1028
+        8,       0.99,     0.99,   0.99,     974
+        9,       0.99,     0.98,   0.99,    1009
+Média / Total,   0.99,     0.99,   0.99,   10000
+
+A análise das métricas por classe demonstra uma consistência notável, com a precisão e a sensibilidade (recall) acima de 0.98 para todos os dígitos. O dígito '1' e '2' destacam-se com um F1-Score perfeito de 1.00.
+
+Para compreender a natureza dos erros residuais, analisou-se a Matriz de Confusão apresentada na Figura 2.
+
+[Inserir aqui a imagem: confusion_matrix.png] Figura 2: Matriz de Confusão do ModelBetterCNN no conjunto de teste.
+
+A matriz apresenta uma diagonal dominante, corroborando a alta taxa de acerto. Os erros (valores fora da diagonal) são esporádicos e semanticamente justificáveis. Destaca-se, por exemplo, uma ligeira confusão entre os dígitos 4 e 9 (o modelo classificou 5 vezes um '9' real como sendo '4', e 8 vezes um '5' real como sendo '9' ou '3'). Estas falhas devem-se à semelhança geométrica entre estes caracteres em certas caligrafias manuscritas. Contudo, dado o volume total de dados (10.000 imagens), estes erros são estatisticamente irrelevantes.
+
+#### 3.2 Comparação entre Modelos
+Para validar a eficiência do modelo ModelBetterCNN, comparou-se o seu desempenho e complexidade computacional com as abordagens implementadas anteriormente. A Tabela 2 resume estes dados.
+
+Tabela 2: Comparação entre os diferentes modelos testados.
+Modelo          	    Nº de Parâmetros	Accuracy	F1-Score (Macro)
+ModelFullyConnected 	      7850	        93%	        0.93
+ModelConvNet	            421642	        98%	        0.98
+ModelConvNet3	            159626      	98% 	    0.98
+ModelBetterCNN	            390858	        99%	        0.99
+
+Análise Comparativa:
+
+-Limitações da Abordagem Densa (ModelFullyConnected): Sendo o modelo mais simples e apresentando o menor número de parâmetros do conjunto, o ModelFullyConnected revelou limitações estruturais significativas. Ao "achatar" a imagem num vetor unidimensional logo na entrada, a rede ignora a componente espacial e as relações de vizinhança entre os pixéis. Esta perda de informação traduz-se numa convergência muito mais tardia durante o treino e numa accuracy final inferior às abordagens convolucionais.
+
+-A ModelConvNet destaca-se por utilizar o maior número de parâmetros de todas as redes testadas. Este excesso de complexidade, contudo, revelou-se contraproducente, levando a uma estagnação rápida da aprendizagem e a uma elevada variação entre a precisão de treino e de teste, indiciando dificuldades de generalização.
+
+-Por outro lado, a ModelConvNet3 apresenta-se como uma rede substancialmente mais profunda, mas, devido a uma arquitetura mais eficiente, possui menos parâmetros que a ConvNet. Esta estrutura permite uma melhor compreensão das características dos dados. No entanto, observou-se que a rede ainda carecia de estabilidade, necessitando de mecanismos adicionais para combater o overfitting.
+
+-A arquitetura final, ModelBetterCNN, possui uma elevada profundidade, mas distingue-se pela introdução de camadas de regularização cruciais: Batch Normalization e Dropout. O Batch Normalization, ao normalizar os pesos durante o treino, induz uma convergência muito mais rápida e estável. Já o Dropout permite mitigar eficazmente o overfitting, tornando a precisão no conjunto de teste muito mais próxima da obtida no treino. Em suma, estes mecanismos permitiram treinar uma rede complexa e profunda de forma robusta, alcançando os 99% de exatidão reportados.
+
+### 4. Conclusão
+Destaca-se, em particular, o desempenho da arquitetura proposta, ModelBetterCNN. Os resultados obtidos demonstram que o aumento da profundidade da rede, quando acompanhado por mecanismos de regularização e normalização adequados, é determinante para a performance do modelo. A introdução de Batch Normalization foi crucial para acelerar a convergência e estabilizar o treino, enquanto o Dropout desempenhou um papel vital na prevenção de overfitting, garantindo que a rede generalizasse corretamente para dados não vistos.
+
+Com uma exatidão final de 99% no conjunto de teste e uma matriz de confusão que apresenta erros residuais apenas em casos de elevada ambiguidade gráfica, conclui-se que o modelo desenvolvido é robusto e eficiente. Este trabalho consolida, assim, a importância do equilíbrio entre a complexidade da arquitetura e as técnicas de otimização no desenvolvimento de soluções de visão computacional de alto desempenho.
