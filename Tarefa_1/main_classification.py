@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# shebang line for linux / mac
 
 import glob
 import os
@@ -17,8 +15,11 @@ from trainer import Trainer
 from datetime import datetime
 
 
-# O programa para de forma 'limpa' ao pressionar Ctrl + C, ao invés de crashar
 def sigintHandler(signum, frame):
+    """
+    Função de Segurança: Permite parar o programa com CTRL+C
+    sem queimar processos ou deixar ficheiros corrompidos.
+    """
     print('SIGINT received. Exiting gracefully.')
     exit(0)
 
@@ -26,20 +27,23 @@ def sigintHandler(signum, frame):
 def main():
 
     # ------------------------------------
-    # Setup argparse
+    # 1. SETUP DOS ARGUMENTOS (O Menu de Opções)
     # ------------------------------------
+    #Parte onde damos a localização dos ficheiros e passamos certas configurações como o "batch size"
+
+    
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-df', '--dataset_folder', type=str,
-                        default='savi_datasets')
+                        default='/home/baldaia/Desktop/savi-2025-2026-trabalho2-grupo5/savi_datasets')
     parser.add_argument('-pe', '--percentage_examples', type=float, default=1,
                         help='Percentage of examples to use for training and testing')
-    parser.add_argument('-ne', '--num_epochs', type=int, default=10,    # Número de vezes que o modelo vai ver o dataset completo
+    parser.add_argument('-ne', '--num_epochs', type=int, default=10,
                         help='Number of epochs for training')
     parser.add_argument('-bs', '--batch_size', type=int, default=64,
                         help='Batch size for training and testing.')
     parser.add_argument('-ep', '--experiment_path', type=str,
-                        default='Tarefa_1/Experiments',
+                        default='/home/baldaia/Desktop/savi-2025-2026-trabalho2-grupo5/Tarefa_1/Experiments_MBCNN',
                         help='Path to save experiment results.')
     parser.add_argument('-rt', '--resume_training', action='store_true',
                         help='Resume training from last checkpoint if available.')
@@ -48,63 +52,60 @@ def main():
     print(args)
 
     # ------------------------------------
-    # Register the sigtinthandler
+    # 2. SEGURANÇA (Registar o Handler)
     # ------------------------------------
+
+    # Processo de segurança para guardar os dados primeiro, antes de fechar o programa.
+    # Usa a função sigintHandler criado acima.
     signal.signal(signal.SIGINT, sigintHandler)
 
     # ------------------------------------
-    # Create the experiment
+    # 3. PREPARAR A PASTA DA EXPERIÊNCIA
     # ------------------------------------
 
-    # experiment_name = datetime.today().strftime('%Y-%m-%d %H:%M:%S')
-    # experiment_name = datetime.today().strftime('%Y-%m-%d %H')  # same experiment every hour
-    # experiment_name = datetime.today().strftime('%Y-%m-%d %H')  # same experiment every hour
-    # args['experiment_full_name'] = os.path.join(
-    #     args['experiment_path'], experiment_name)
+    # Definimos o caminho para a pasta da esperiência 
     args['experiment_full_name'] = args['experiment_path']
 
     print('Starting experiment: ' + args['experiment_full_name'])
 
-    # if os.path.exists(args['experiment_full_name']):
-    #     shutil.rmtree(args['experiment_full_name'])
-    #     print('Experiment folder already exists. Deleting to start fresh.')
-
+    # Cria a pasta ou usa a pasta caso ela já exista 
     os.makedirs(args['experiment_full_name'], exist_ok=True)
 
     # ------------------------------------
-    # Create datasets
+    # 4. CRIAR OS DATASETS
     # ------------------------------------
     train_dataset = Dataset(args, is_train=True)
     test_dataset = Dataset(args, is_train=False)
 
     # ------------------------------------
-    # Create the model
+    # 5. ESCOLHER O MODELO
     # ------------------------------------
-    # model = ModelFullyconnected()
-    # model = ModelConvNet()
-    # model = ModelConvNet3()
+    #model = ModelFullyconnected()
+    #model = ModelConvNet()
+    #model = ModelConvNet3()
     model = ModelBetterCNN()
 
     # ------------------------------------
-    # Start training
+    # 6. INICIAR O TREINO
     # ------------------------------------
-
-    # Sanity Check: Testar manualmente com uma imagem
-    # Como o PyTorch trabalha com lotes, o unsqueeze transforma a imagem (1, 28, 28) num lote de 1 imagem (1, 1, 28, 28)
-    # model.forward faz uma previsão rápida para testar se a imagem passa pela rede sem erros antes do treino real
     trainer = Trainer(args, train_dataset, test_dataset, model)
-    image_tensor, label_gt_tensor = trainer.train_dataloader.dataset.__getitem__(
-        107)  # type: ignore
+
+    # Verificar se está tudo bem com o programa e se está tudo funcional para iniciar o processo.
+    # Usamos a imagem 107 mas podiamos ter usado outra qualquer.
+    image_tensor, label_gt_tensor = trainer.train_dataloader.dataset.__getitem__(107)  
+    
+    # Adiciona a dimensão do batch: (1, 28, 28) passa a ser (1, 1, 28, 28)
     image_tensor = image_tensor.unsqueeze(0)
+
+    # Tenta fazer uma previsão
     label_pred_tensor = model.forward(image_tensor)
 
-    # Inicia o treino
-    # Inicia o loop de epochs, calcula o erro, faz o backpropagation e atualiza os pesos
-    trainer.train()
+    # ------------------------------------
+    # 7. EXECUTAR
+    # ------------------------------------
+    trainer.train()      # Inicia o treino
 
-    # Inicia a avaliação
-    # O modelo é testado com as imagens de teste para verificar a precisão
-    trainer.evaluate()
+    trainer.evaluate()   # Inicia o teste 
 
 
 if __name__ == '__main__':

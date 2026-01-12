@@ -3,75 +3,76 @@ from torchinfo import summary
 import torch.nn as nn
 import torch
 
+'''
+Código responsável por definir a arquitetura das redes neurais
+'''
 
 class ModelFullyconnected(nn.Module):
-
+    '''
+    ModelFullyconnected é um modelo MLP (Multi-Layer Perceptron). Não usa convolução, apenas liga todos os pixeis a todos os outputs.
+    '''
     def __init__(self):
-        super(ModelFullyconnected, self).__init__()  # call the parent constructor
+        super(ModelFullyconnected, self).__init__()  #Ativa o pytorch. Carrega todas as ferramentas básicas de IA (gravar pesos, usar GPU, etc.)
 
-        nrows = 28
+        #Passamos a imagem com 28x28 pixeis (tamanho das imagens usadas) para uma linha com números (784)
+        nrows = 28 
         ncols = 28
-        ninputs = nrows * ncols
-        noutputs = 10
+        ninputs = nrows * ncols 
 
-        # Define the layers of the model
+        noutputs = 10 #Número de saídas possíveis
+
+        # Criamos uma camada totalmente conectada. Ligas os 784 pixeis de entrada a cada um dos 10 resultados possíveis.
         self.fc = nn.Linear(ninputs, noutputs)
 
         print('Model architecture initialized with ' + str(self.getNumberOfParameters()) + ' parameters.')
         summary(self, input_size=(1, 1, 28, 28))
 
     def forward(self, x):
+        # "x" corresponde á imagem que está nor formato [Batch, 1, 28, 28]
 
-        # print('Forward method called ...')
-        # print('Input x.shape = ' + str(x.shape))
+        x = x.view(x.size(0), -1) #Pega no quadrado 28x28 e coloca tudo numa linha de 784 números
 
-        # flatten the input to a vector of 1x28x28
-        x = x.view(x.size(0), -1)
-        # print('Input x.shape = ' + str(x.shape))
-
-        # Now we can pass through the fully connected layer
-        y = self.fc(x)
-        # print('Output y.shape = ' + str(y.shape))
+        y = self.fc(x) #Damos os dados da imagem á camada totalmente conectada
 
         return y
 
     def getNumberOfParameters(self):
+        #Soma o total dos "pesos". Serve apenas para ter noção da complexidade do modelo
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
 
 class ModelConvNet(nn.Module):
 
+    '''
+    Ao contrário do modelo anterior (que achatava a imagem logo no início), 
+    este modelo "olha" para a imagem como uma matriz (2D). 
+    Ele usa "janelas" (filtros) que deslizam sobre a imagem para detetar padrões (linhas, curvas, círculos).
+    '''
+
     def __init__(self):
 
-        super(ModelConvNet, self).__init__()  # call the parent constructor
+        super(ModelConvNet, self).__init__()  
 
         nrows = 28
         ncols = 28
         ninputs = nrows * ncols
         noutputs = 10
 
-        # Define first conv layer
+        #Camada de detetores báseicos, em que aplicamos 32 filtros diferentes 
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3, padding=1)
-        # this will output 32x28x28
 
+        #Pega na informação do con1 e comprime. Passa de uma imagem 28x28 para 14x14 mas mantem as carcateisticas mais importantes
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
-        # this will output 32x14x14
+    
 
-        # Define second conv layer
+        #Pega nos resultados anteriores e aplica mais 32 filtros.
         self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1)
-        # this will output 64x14x14
-
-        # Define the second pooling layer
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
-        # this will output 64x7x7
 
-        # Define the first fully connected layer
+        #Apõs as convoluções criamos uam camada totalmente conectada para dar a resposta
         self.fc1 = nn.Linear(64 * 7 * 7, 128)
-        # this will output 128
-
-        # Define the second fully connected layer
         self.fc2 = nn.Linear(128, 10)
-        # this will output 10
+
 
         print('Model architecture initialized with ' + str(self.getNumberOfParameters()) + ' parameters.')
         summary(self, input_size=(1, 1, 28, 28))
@@ -80,6 +81,8 @@ class ModelConvNet(nn.Module):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
     def forward(self, x):
+
+        #Segue a mesma lógica do forward anterior, no entanto neste mantemos o 2D nas convoluções até ao linear que temos que passar á linha de números.
 
         print('Forward method called ...')
 
@@ -97,7 +100,6 @@ class ModelConvNet(nn.Module):
         x = self.pool2(x)
         print('After pool2 x.shape = ' + str(x.shape))
 
-        # Transform to latent vector
         x = x.view(-1, 64*7*7)
         print('After flattening x.shape = ' + str(x.shape))
 
@@ -111,47 +113,45 @@ class ModelConvNet(nn.Module):
 
 
 class ModelConvNet3(nn.Module):
-    """This is a more complex ConvNet model with 3 conv layers."""
+
+    '''
+    Segue extamente a mesma lógica que o modelconvnet, mas tem uma camada extra,
+    ou seja, uma envolução da anterior.
+    '''
 
     def __init__(self):
 
-        super(ModelConvNet3, self).__init__()  # call the parent constructor
+        super(ModelConvNet3, self).__init__() 
 
         nrows = 28
         ncols = 28
         ninputs = nrows * ncols
         noutputs = 10
 
-        # Define first conv layer
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3, padding=1)
-        # this will output 32x28x28
 
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
-        # this will output 32x14x14
 
-        # Define second conv layer
         self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1)
-        # this will output 64x14x14
 
-        # Define the second pooling layer
+   
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
-        # this will output 64x7x7
 
-        # Define second conv layer
+
         self.conv3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1, stride=2)
-        # this will output ?
+  
 
-        # Define the second pooling layer
+
         self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
-        # this will output ?
+ 
 
-        # Define the first fully connected layer
+
         self.fc1 = nn.Linear(128 * 2 * 2, 128)
-        # this will output 128
 
-        # Define the second fully connected layer
+
+
         self.fc2 = nn.Linear(128, 10)
-        # this will output 10
+  
 
         print('Model architecture initialized with ' + str(self.getNumberOfParameters()) + ' parameters.')
         summary(self, input_size=(1, 1, 28, 28))
@@ -161,65 +161,61 @@ class ModelConvNet3(nn.Module):
 
     def forward(self, x):
 
-        # print('Forward method called ...')
-
-        # print('Input x.shape = ' + str(x.shape))
 
         x = self.conv1(x)
-        # print('After conv1 x.shape = ' + str(x.shape))
 
         x = self.pool1(x)
-        # print('After pool1 x.shape = ' + str(x.shape))
 
         x = self.conv2(x)
-        # print('After conv2 x.shape = ' + str(x.shape))
 
         x = self.pool2(x)
-        # print('After pool2 x.shape = ' + str(x.shape))
 
         x = self.conv3(x)
-        # print('After conv3 x.shape = ' + str(x.shape))
 
         x = self.pool3(x)
-        # print('After pool3 x.shape = ' + str(x.shape))
 
-        # Transform to latent vector
         x = x.view(-1, 128*2*2)
-        # print('After flattening x.shape = ' + str(x.shape))
+
 
         x = self.fc1(x)
-        # print('After fc1 x.shape = ' + str(x.shape))
 
         y = self.fc2(x)
-        # print('Output y.shape = ' + str(y.shape))
 
         return y
 
 class ModelBetterCNN(nn.Module):
+
+    '''
+    ModelBetterCNN é uma  arquitetura mais robusta e otimizada em relação aos restantes modelos.
+    
+    Diferenças principais para os modelos anteriores:
+    1. Batch Normalization (bn1, bn2, bn3): Adicionado após cada convolução. 
+       Normaliza os dados para estabilizar o treino, permitindo que a rede aprenda 
+       mais rápido e não fique 'presa' em mínimos locais.
+       
+    2. Dropout (0.5): Desliga aleatoriamente 50% dos neurónios durante o treino para forçar 
+       a rede a criar caminhos redundantes e evitar o Overfitting (decorar dados).
+       
+    3. Maior Capacidade: A camada linear intermédia (fc1) foi aumentada para 256 neurónios 
+       (vs 128 nos anteriores), permitindo processar mais informação complexa.
+    '''
+
     def __init__(self):
         super(ModelBetterCNN, self).__init__()
-        
-        # --- CAMADA 1 ---
-        # Conv: Entra 1 (preto e branco), Saem 32 características
+
         self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
         self.bn1 = nn.BatchNorm2d(32)  # Normaliza os 32 canais
-        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2) # Reduz 28x28 -> 14x14
+        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2) 
 
-        # --- CAMADA 2 ---
-        # Conv: Entram 32, Saem 64
+  
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.bn2 = nn.BatchNorm2d(64)  # Normaliza
-        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2) # Reduz 14x14 -> 7x7
+        self.bn2 = nn.BatchNorm2d(64)  
+        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2) 
 
-        # --- CAMADA 3 (A camada extra pedida) ---
-        # Conv: Entram 64, Saem 128
         self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
-        self.bn3 = nn.BatchNorm2d(128) # Normaliza
-        self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2) # Reduz 7x7 -> 3x3 
-        # (Nota: 7 a dividir por 2 dá 3.5, o computador arredonda para baixo -> 3)
+        self.bn3 = nn.BatchNorm2d(128) 
+        self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2) 
 
-        # --- CLASSIFICADOR (Fully Connected) ---
-        # Cálculo do tamanho: 128 canais * 3 * 3
         self.fc1 = nn.Linear(128 * 3 * 3, 256) # Camada densa maior
         self.dropout = nn.Dropout(0.5)         # Desliga 50% dos neurónios aleatoriamente
         self.fc2 = nn.Linear(256, 10)          # 10 saídas (0 a 9)
@@ -230,11 +226,10 @@ class ModelBetterCNN(nn.Module):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
     def forward(self, x):
-        # Aplicamos a sequência: Conv -> Batch Norm -> ReLU (Porteiro) -> Pool
         
         # Bloco 1
         x = self.conv1(x)
-        x = self.bn1(x)     # Batch Norm antes ou depois da ativação (ambos funcionam, aqui usamos antes)
+        x = self.bn1(x)     
         x = torch.relu(x)   # OBRIGATÓRIO: A ativação não-linear
         x = self.pool1(x)
         
@@ -250,13 +245,13 @@ class ModelBetterCNN(nn.Module):
         x = torch.relu(x)
         x = self.pool3(x)
 
-        # Achatamento (Flatten)
+   
         x = x.view(-1, 128 * 3 * 3)
         
         # Classificação
         x = self.fc1(x)
-        x = torch.relu(x)   # Ativação na camada densa
-        x = self.dropout(x) # O Sargento Dropout atua aqui!
+        x = torch.relu(x)   
+        x = self.dropout(x) 
         y = self.fc2(x)
         
         return y
