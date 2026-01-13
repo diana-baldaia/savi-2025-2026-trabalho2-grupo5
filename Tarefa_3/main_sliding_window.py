@@ -1,158 +1,135 @@
+
 import torch
 import torchvision.transforms as transforms
+import os
+import sys
+from model import ModelBetterCNN
 from PIL import Image
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import os
 import numpy as np
-from model import ModelBetterCNN # Importa o teu modelo da Tarefa 1
+from tqdm import tqdm
 
-def sliding_window_detection(image_path, model_path):
-    
-    # -----------------------------------------------------------
-    # 1. Configurações (Hiperparâmetros da Deteção)
-    # -----------------------------------------------------------
-    WINDOW_SIZE = 28       # O tamanho que o modelo sabe ler (28x28)
-    STRIDE = 4             # O "Passo". Avança 4 pixels de cada vez.
-                           # Passo pequeno = Mais lento, mais preciso.
-                           # Passo grande = Rápido, pode falhar o centro.
-    
-    CONFIDENCE_THRESHOLD = 0.8 # Só aceita se tiver 95% de certeza.
-                                # Como o modelo não conhece "fundo preto", 
-                                # ele tende a inventar. Precisamos de filtrar.
+# Para correr sem o aviso do NNPACK
+# python3 main_sliding_window.py 2>/dev/null
 
-    # -----------------------------------------------------------
-    # 2. Preparar o Modelo (Cérebro da Tarefa 1)
-    # -----------------------------------------------------------
-    print(f"A carregar modelo de: {model_path}")
+def nms(boxes, iou_threshold=0.3):
+    """
+    Non-Maximum Suppression: Remove caixas sobrepostas que detetam o mesmo objeto.
+    boxes: lista de (x, y, w, h, label, score)
+    """
+    if not boxes:
+        return []
+
+    # Converter para formato utilizável (x1, y1, x2, y2, score)
+    b = np.array([[box[0], box[1], box[0]+box[2], box[1]+box[3], box[5]] for box in boxes])
+    labels = np.array([box[4] for box in boxes])
     
-    # Inicializar a arquitetura (tem de ser igual à usada no treino!)
-    model = ModelBetterCNN()
-    
-    # Carregar os pesos (o ficheiro .pkl)
-    # Adicionamos weights_only=False para resolver o erro do PyTorch 2.6+
-    checkpoint = torch.load(model_path, map_location=torch.device('cpu'), weights_only=False)
-    
-    # O checkpoint tem várias coisas (epoch, loss...), queremos só o 'model_state_dict'
-    if 'model_state_dict' in checkpoint:
-        model.load_state_dict(checkpoint['model_state_dict'])
-    else:
-        # Caso tenhas gravado o modelo diretamente sem o dicionário (menos provável no teu trainer)
-        model.load_state_dict(checkpoint)
+    x1, y1, x2, y2, scores = b[:,0], b[:,1], b[:,2], b[:,3], b[:,4]
+    areas = (x2 - x1) * (y2 - y1)
+    order = scores.argsort()[::-1]
+
+    keep = []
+    while order.size > 0:
+        i = order[0]
+        keep.append(i)
         
-    model.eval() # IMPORTANTE: Coloca em modo de avaliação (desliga Dropout, fixa Batch Norm)
+        xx1 = np.maximum(x1[i], x1[order[1:]])
+        yy1 = np.maximum(y1[i], y1[order[1:]])
+        xx2 = np.minimum(x2[i], x2[order[1:]])
+        yy2 = np.minimum(y2[i], y2[order[1:]])
 
-    # -----------------------------------------------------------
-    # 3. Preparar a Imagem (Cena da Tarefa 2)
-    # -----------------------------------------------------------
-    print(f"A carregar imagem de: {image_path}")
-    full_image = Image.open(image_path).convert('L') # Converter para cinzento
+        w = np.maximum(0.0, xx2 - xx1)
+        h = np.maximum(0.0, yy2 - yy1)
+        inter = w * h
+        ovr = inter / (areas[i] + areas[order[1:]] - inter)
+
+        inds = np.where(ovr <= iou_threshold)[0]
+        order = order[inds + 1]
+
+    return [boxes[i] for i in keep]
+
+
+def detect_and_save(image_path, model, device, output_path, stride=4, threshold=0.95):
+    """Processa uma única imagem e guarda o resultado visual."""
+    WINDOW_SIZE = 28
+    full_image = Image.open(image_path).convert('L')
     width, height = full_image.size
-
-    # Transformação: A mesma usada no treino (apenas ToTensor)
     to_tensor = transforms.ToTensor()
-
-    # -----------------------------------------------------------
-    # 4. O Ciclo da Janela Deslizante (O "Scanner")
-    # -----------------------------------------------------------
-    detected_boxes = [] # Vamos guardar aqui: (x, y, label, probabilidade)
-
-    print("A iniciar varrimento (isto pode demorar um pouco)...")
     
-    # Loop Y (Linhas)
-    for y in range(0, height - WINDOW_SIZE + 1, STRIDE):
-        # Loop X (Colunas)
-        for x in range(0, width - WINDOW_SIZE + 1, STRIDE):
-            
-            # ... dentro dos ciclos for x, for y ...
-
-            # A. Recortar a Janela
+    raw_detections = []
+    
+    # Scanner
+    for y in range(0, height - WINDOW_SIZE + 1, stride):
+        for x in range(0, width - WINDOW_SIZE + 1, stride):
             crop = full_image.crop((x, y, x + WINDOW_SIZE, y + WINDOW_SIZE))
-            
-            crop_tensor = to_tensor(crop)
-            
-            # --- ALTERAÇÃO AQUI ---
-            # Comenta estas linhas. Vamos obrigar o modelo a olhar para o preto
-            # e a decidir com base na confiança, como pede o professor.
-            # if torch.sum(crop_tensor) < 0.5: 
-            #     continue 
-            # ----------------------
-            if crop_tensor.std() < 0.01:  
-                continue
-            # C. Preparar para o Modelo
-            input_tensor = crop_tensor.unsqueeze(0)
+            crop_tensor = to_tensor(crop).unsqueeze(0).to(device)
 
-            # D. Previsão e Softmax
-            with torch.no_grad(): 
-                output = model(input_tensor)
-                
-                # O Softmax transforma os números brutos (logits) em percentagens (0.0 a 1.0)
-                probabilities = torch.softmax(output, dim=1) 
-                
-                max_prob, predicted_class = torch.max(probabilities, 1)
-                
-                prob_value = max_prob.item()
-                label = predicted_class.item()
+            if crop_tensor.std() < 0.1: continue # Ignora zonas vazias (pretas)
 
-            # E. Decisão (Thresholding)
-            # É AQUI que se cumpre o ponto 2 da Tarefa 3
-            # Se a certeza for baixa, ignoramos.
-            if prob_value > CONFIDENCE_THRESHOLD:
-                detected_boxes.append((x, y, label, prob_value))
-            
-            
-    print(f"Concluído! Foram detetadas {len(detected_boxes)} caixas potenciais.")
+            with torch.no_grad():
+                output = model(crop_tensor)
+                probs = torch.softmax(output, dim=1)
+                max_prob, pred = torch.max(probs, 1)
+                
+                if max_prob.item() > threshold:
+                    raw_detections.append((x, y, WINDOW_SIZE, WINDOW_SIZE, pred.item(), max_prob.item()))
 
-    # -----------------------------------------------------------
-    # 5. Visualização
-    # -----------------------------------------------------------
-    fig, ax = plt.subplots(1)
+    final_detections = nms(raw_detections, iou_threshold=0.2)
+
+    # Visualização e Gravação
+    fig, ax = plt.subplots(1, figsize=(8, 8))
     ax.imshow(full_image, cmap='gray')
-
-    # Desenhar todas as caixas detetadas
-    for (x, y, label, prob) in detected_boxes:
-        # Criar retângulo vermelho
-        rect = patches.Rectangle((x, y), WINDOW_SIZE, WINDOW_SIZE, 
-                                 linewidth=1, edgecolor='r', facecolor='none')
+    for (x, y, w, h, label, prob) in final_detections:
+        rect = patches.Rectangle((x, y), w, h, linewidth=2, edgecolor='lime', facecolor='none')
         ax.add_patch(rect)
-        # Escrever o número e a confiança
-        ax.text(x, y - 2, f"{label} ({prob:.2f})", color='yellow', fontsize=6, weight='bold')
-
-    plt.title(f"Sliding Window Detection (Stride={STRIDE})")
-    plt.axis('off')
+        ax.text(x, y-5, f"{label}({prob:.2f})", color='lime', fontsize=8, bbox=dict(facecolor='black', alpha=0.5, edgecolor='none'))
     
-    output_filename = 'sliding_window_result.png'
-    plt.savefig(output_filename, dpi=300)
-    print(f"Resultado salvo em: {output_filename}")
-    plt.show()
+    plt.title(f"Detection: {os.path.basename(image_path)}")
+    plt.axis('off')
+    plt.savefig(output_path, bbox_inches='tight')
+    plt.close(fig) # IMPORTANTE: Fecha o gráfico para não encher a memória RAM
+
+
+# --- SCRIPT PRINCIPAL ---
+
+def process_full_dataset(base_data_path, model_path, versions=['A', 'D'], num_images_per_ver=20):
+
+    # Carregar Modelo
+    model = ModelBetterCNN()
+    checkpoint = torch.load(model_path, map_location='cpu', weights_only=False)
+    model.load_state_dict(checkpoint['model_state_dict'] if 'model_state_dict' in checkpoint else checkpoint)
+    model.eval()
+
+    # Criar pasta raiz para resultados
+    results_root = "Tarefa_3_Results"
+    os.makedirs(results_root, exist_ok=True)
+
+    for ver in versions:
+        print(f"\n--- Processando Versão {ver} ---")
+        img_dir = os.path.join(base_data_path, f"mnist_detection_{ver}", "test", "images")
+        save_dir = os.path.join(results_root, f"detections_{ver}")
+        os.makedirs(save_dir, exist_ok=True)
+
+        if not os.path.exists(img_dir):
+            print(f"Aviso: Pasta {img_dir} não encontrada. Ignorando...")
+            continue
+
+        # Listar imagens e limitar quantidade
+        all_images = sorted([f for f in os.listdir(img_dir) if f.endswith(('.jpg', '.png'))])
+        images_to_process = all_images[:num_images_per_ver]
+
+        for img_name in tqdm(images_to_process, desc=f"Versão {ver}", file=sys.stdout):
+            input_path = os.path.join(img_dir, img_name)
+            output_path = os.path.join(save_dir, f"result_{img_name}")
+            detect_and_save(input_path, model, 'cpu', output_path, stride=6, threshold=0.98)
+
+    print(f"\nConcluído! Resultados guardados em: {results_root}")
 
 if __name__ == "__main__":
-    
-    # --- CAMINHOS (AJUSTA AQUI SE NECESSÁRIO) ---
-    # root_path = '/home/baldaia/Desktop/savi-2025-2026-trabalho2-grupo5/Tarefa_3'
-    
-    # 1. Onde está o modelo treinado (Task 1)?
-    # Procura pelo ficheiro 'best.pkl' dentro da pasta Experiments
-    # model_path = os.path.join(root_path, 'Experiments', 'best.pkl')
-    model_path = 'Tarefa_1/Experiments/best.pkl'
+    # CONFIGURAÇÕES
+    MODEL_FILE = '/home/baldaia/Desktop/savi-2025-2026-trabalho2-grupo5/Tarefa_1/Experiments_MBCNN/best.pkl' # Caminho do teu modelo
+    DATASET_PATH = '/home/baldaia/Desktop/savi-2025-2026-trabalho2-grupo5/Tarefa_2'                         # Pasta onde estão as subpastas mnist_detection_X
 
-    # 2. Qual imagem queres testar (Task 2)?
-    # Vamos testar uma imagem da versão FÁCIL (A) primeiro para ver se funciona
-    # Escolhe uma imagem que saibas que existe na pasta mnist_detection_A/test/images
-    # image_to_test = os.path.join(root_path, 'mnist_detection_A', 'test', 'images', 'scene_00001.jpg')
-    image_to_test = 'Tarefa_2/mnist_detection_A/test/images/scene_00001.jpg'
-
-    # Se quiseres testar a difícil, descomenta esta:
-    # image_to_test = os.path.join(root_path, 'mnist_detection_D', 'test', 'images', 'scene_00001.jpg')
-    # image_to_test = 'Tarefa_2/mnist_detection_D/test/images/scene_00001.jpg'
-
-    # Verificar se os ficheiros existem antes de correr
-    if not os.path.exists(model_path):
-        print(f"ERRO: Modelo não encontrado em {model_path}")
-        print("Certifica-te que treinaste o modelo na Tarefa 1 e que o ficheiro best.pkl existe.")
-    elif not os.path.exists(image_to_test):
-        print(f"ERRO: Imagem não encontrada em {image_to_test}")
-        print("Verifica se geraste o dataset na Tarefa 2.")
-    else:
-        # Correr a função
-        sliding_window_detection(image_to_test, model_path)
+    # Corre para todas as versões, processando 20 imagens de cada para teste rápido
+    process_full_dataset(DATASET_PATH, MODEL_FILE, versions=['A', 'D'], num_images_per_ver=20)
