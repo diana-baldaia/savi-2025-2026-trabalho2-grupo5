@@ -54,7 +54,7 @@ class ComplexSceneDataset(Dataset):
         self.crop_size = 28
         
     def __len__(self):
-        return len(self.image_files) * 15 # Aumentei para 15 exemplos por imagem
+        return len(self.image_files) * 15   # Aumentei para 15 exemplos por imagem
 
     def __getitem__(self, idx):
         img_idx = idx // 15

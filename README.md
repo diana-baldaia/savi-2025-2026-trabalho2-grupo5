@@ -404,3 +404,16 @@ Através dos resultados obtidos verifica-se que o método embora seja capaz de d
 ## Tarefa 4
 
 ### 1. Objetivo
+
+
+### 2. Metodologia
+
+
+### 3. Resultados
+
+
+### 4. Conclusão
+
+
+#
+## Reflexão
