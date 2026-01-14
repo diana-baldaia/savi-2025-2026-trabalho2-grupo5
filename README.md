@@ -5,12 +5,12 @@
 
 ### 1. Objetivo
 Neste trabalho pretende-se desenvolver um classificador de imagens baseado em Redes Neuronais Convolucionais (CNN) para identificar dígitos manuscritos (0 a 9). 
-Para a primeira tarefa, o objetivo é otimizar o classificador desenvolvido nas aulas, de modo a lidar com a totalidade do dataset MNIST (60.000 imagens de treino e 10.000 de teste), garantindo uma solução escalável e precisa.
+Para a primeira tarefa, o objetivo é otimizar o classificador desenvolvido nas aulas, de modo a lidar com a totalidade do _dataset_ MNIST (60.000 imagens de treino e 10.000 de teste), garantindo uma solução escalável e precisa.
 
 
 ### 2. Metodologia
 
-A metodologia adotada para a Tarefa 1 seguiu um fluxo de trabalho de *Deep Learning* ponta-a-ponta, ou seja, desde o tratamento de dados até à obtenção de métricas que permitam uma análise dos resultados obtidos. Para tal, foram reaproveitados os códigos desenvolvidos em sala de aula (main.py, model.py, trainer.py e dataset.py), a função de cada um e as alterações a que foram sujeitos encontram-se detalhadas de seguida.
+A metodologia adotada para a Tarefa 1 seguiu um fluxo de trabalho de *Deep Learning* ponta-a-ponta, ou seja, desde o tratamento de dados até à obtenção de métricas que permitam uma análise dos resultados obtidos. Para tal, foram reaproveitados os códigos desenvolvidos em sala de aula (_main.py, model.py, trainer.py e dataset.py_), a função de cada um e as alterações a que foram sujeitos encontram-se detalhadas de seguida.
 
 #### 2.1. Tratamento de Dados e Pré-processamento (_dataset.py_)
 
@@ -32,7 +32,7 @@ Esta função é executada uma única vez. O seu objetivo é preparar o índice 
     
 `__len__`
 
-Retorna o tamanho total do dataset a ser usado. O _DataLoader_ precisa disto para saber quantas iterações (_batches_) fará numa época (_epoch_), ou seja, quantos lotes de imagens terá por cada vez que percorre todo o dataset disponibilizado.
+Retorna o tamanho total do _dataset_ a ser usado. O _DataLoader_ precisa disto para saber quantas iterações (_batches_) fará numa época (_epoch_), ou seja, quantos lotes de imagens terá por cada vez que percorre todo o _dataset_ disponibilizado.
 
 `__getitem__`
 
@@ -151,42 +151,55 @@ Nesta secção, apresentam-se os resultados obtidos durante a fase de treino e t
 #### 3.1. _ModelBetterCNN_
 O processo de treino foi monitorizado ao longo de 10 épocas. A figura abaixo ilustra a evolução da função de perda (_Loss_) nos conjuntos de treino e de teste.
 
-[Inserir aqui a imagem: training.png] Figura 1: Evolução do erro (Loss) durante as épocas de treino e teste.
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/6e692fb6-6ca8-47e1-b0a6-740207e494b7" width="500">
+  <br>
+  <em>Figura 1: Evolução do erro (Loss) durante as épocas de treino e teste.</em>
+  <br><br>
+</div>
+
 
 Observa-se uma convergência rápida e estável do modelo. O erro no conjunto de teste (linha azul) acompanha a descida do erro de treino (linha vermelha), estabilizando em valores próximos de zero. A ausência de uma divergência significativa entre as duas curvas indica que o modelo possui uma boa capacidade de generalização e que não ocorreu _Overfitting_ significativo. O melhor modelo (indicado pela linha tracejada verde) foi obtido na época 8, onde o erro de teste atingiu o seu mínimo global.
 
 A avaliação final no conjunto de teste, detalhada na tabela seguinte, revela um ótimo desempenho da rede, alcançando uma exatidão (_Accuracy_) global de 99%.
 
-Classe (Dígito),Precision,Recall,F1-Score,Suporte
-        0,       0.99,     1.00,   0.99,     980
-        1,       1.00,     0.99,   1.00,    1135
-        2,       1.00,     0.99,   1.00,    1032
-        3,       0.99,     1.00,   0.99,    1010
-        4,       1.00,     0.99,   0.99,     982
-        5,       0.99,     0.99,   0.99,     892
-        6,       0.99,     0.99,   0.99,     958
-        7,       0.99,     0.99,   0.99,    1028
-        8,       0.99,     0.99,   0.99,     974
-        9,       0.99,     0.98,   0.99,    1009
-Média / Total,   0.99,     0.99,   0.99,   10000
+| Classe (Dígito) | Precision | Recall | F1-Score | Suporte |
+| :---: | :---: | :---: | :---: | :---: |
+| 0 | 0.99 | 1.00 | 0.99 | 980 |
+| 1 | 1.00 | 0.99 | 1.00 | 1135 |
+| 2 | 1.00 | 0.99 | 1.00 | 1032 |
+| 3 | 0.99 | 1.00 | 0.99 | 1010 |
+| 4 | 1.00 | 0.99 | 0.99 | 982 |
+| 5 | 0.99 | 0.99 | 0.99 | 892 |
+| 6 | 0.99 | 0.99 | 0.99 | 958 |
+| 7 | 0.99 | 0.99 | 0.99 | 1028 |
+| 8 | 0.99 | 0.99 | 0.99 | 974 |
+| 9 | 0.99 | 0.98 | 0.99 | 1009 |
+| **Média / Total** | **0.99** | **0.99** | **0.99** | **10000** |
+
 
 A análise das métricas por classe demonstra uma consistência notável, com a precisão e a sensibilidade (_recall_) acima de 0.98 para todos os dígitos. O dígito '1' e '2' destacam-se com um _F1-Score_ perfeito de 1.00.
 
 Para compreender a natureza dos erros residuais, analisou-se a Matriz de Confusão apresentada na Figura 2.
 
-[Inserir aqui a imagem: confusion_matrix.png] Figura 2: Matriz de Confusão do ModelBetterCNN no conjunto de teste.
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/67130f0d-ebe1-48b0-9893-d959d234391f" width="500">
+  <br>
+  <em>Figura 2: Matriz de Confusão do ModelBetterCNN no conjunto de teste.</em>
+  <br><br>
+</div>
 
 A matriz apresenta uma diagonal dominante, corroborando a alta taxa de acerto. Os erros (valores fora da diagonal) são esporádicos e semanticamente justificáveis. Destaca-se, por exemplo, uma ligeira confusão entre os dígitos 4 e 9 (o modelo classificou 5 vezes um '9' real como sendo '4', e 8 vezes um '5' real como sendo '9' ou '3'). Estas falhas devem-se à semelhança geométrica entre estes caracteres em certas caligrafias manuscritas. Contudo, dado o volume total de dados (10.000 imagens), estes erros são estatisticamente irrelevantes.
 
 #### 3.2. Comparação entre Modelos
-Para validar a eficiência do modelo _ModelBetterCNN_, comparou-se o seu desempenho e complexidade computacional com as abordagens implementadas anteriormente. A Tabela 2 resume estes dados.
+Para validar a eficiência do modelo _ModelBetterCNN_, comparou-se o seu desempenho e complexidade computacional com as abordagens implementadas anteriormente. A tabela seguinte resume estes dados.
 
-Tabela 2: Comparação entre os diferentes modelos testados.
-Modelo          	    Nº de Parâmetros	Accuracy	F1-Score (Macro)
-ModelFullyConnected 	      7850	        93%	        0.93
-ModelConvNet	            421642	        98%	        0.98
-ModelConvNet3	            159626      	98% 	    0.98
-ModelBetterCNN	            390858	        99%	        0.99
+| Modelo | Nº de Parâmetros | Accuracy | F1-Score (Macro) |
+| :---: | :---: | :---: | :---: | :---: |
+| ModelFullyConnected | 7850 | 93% | 0.93 |
+| ModelConvNet | 421642 | 98% | 0.98 |
+| ModelConvNet3 | 159626 | 98% | 0.98 |
+| ModelBetterCNN | 390858 | 99% | 0.99 |
 
 Análise Comparativa:
 
@@ -207,83 +220,94 @@ Com uma exatidão final de 99% no conjunto de teste e uma matriz de confusão qu
 ## Tarefa 2
 
 ### 1. Objetivo
-O objetivo desta tarefa consiste na criação de um dataset sintético mais complexo, transitando de um cenário de classificação simples (onde o dígito está centrado e isolado) para um cenário de deteção de objetos. As imagens geradas simulam "cenas" onde os dígitos do dataset MNIST são posicionados aleatoriamente num fundo maior, podendo variar em escala e quantidade, introduzindo desafios de localização espacial e múltiplas instâncias.
+O objetivo desta tarefa consiste na criação de um _dataset_ sintético mais complexo, transitando de um cenário de classificação simples (onde o dígito está centrado e isolado) para um cenário de deteção de objetos. As imagens geradas simulam "cenas" onde os dígitos do _dataset_ MNIST são posicionados aleatoriamente num fundo maior, podendo variar em escala e quantidade, introduzindo desafios de localização espacial e múltiplas instâncias.
 
 ### 2. Metodologia
-A metodologia adotada divide-se em duas fases distintas: a geração sintética dos dados e a sua subsequente validação estatística. Para tal, conta com um script responsável por criar as imagens mais complexas, main_synthesis.py, e um outro, main_dataset_stats.py, responsável por analisar e validar os datasets criados.
+A metodologia adotada divide-se em duas fases distintas: a geração sintética dos dados e a sua subsequente validação estatística. Para tal, conta com um _script_ responsável por criar as imagens mais complexas, `main_synthesis.py`, e um outro, `main_dataset_stats.py`, responsável por analisar e validar os _datasets_ criados.
 
-#### 2.1. Criação das imagens (main_synthesis.py)
-A sua função é transformar o dataset MNIST original (destinado a classificação simples) num dataset mais complexo para deteção de objetos. O código opera através da composição sintética de imagens, colocando dígitos em posições aleatórias sobre um fundo negro, gerindo simultaneamente a escala, a quantidade e a não-sobreposição dos elementos.
+#### 2.1. Criação das imagens (_main_synthesis.py_)
+A sua função é transformar o _dataset_ MNIST original (destinado a classificação simples) num _dataset_ mais complexo para deteção de objetos. O código opera através da composição sintética de imagens, colocando dígitos em posições aleatórias sobre um fundo negro, gerindo simultaneamente a escala, a quantidade e a não-sobreposição dos elementos.
 
 O código organiza-se em duas funções e um bloco de execução principal:
 
-__check_overlap__
-Esta função implementa a lógica geométrica crucial para garantir a integridade da "Ground Truth". O objetivo é impedir que dois dígitos sejam desenhados um em cima do outro, o que tornaria a deteção ambígua ou impossível.
+`check_overlap`
+Esta função implementa a lógica geométrica crucial para garantir a integridade da "_Ground Truth_". O objetivo é impedir que dois dígitos sejam desenhados um em cima do outro, o que tornaria a deteção ambígua ou impossível.
 
-    Entrada: Recebe as coordenadas da caixa proposta (new_box) e a lista de caixas já colocadas (existing_boxes).
+- Entrada: Recebe as coordenadas da caixa proposta (new_box) e a lista de caixas já colocadas (existing_boxes).
 
-    Lógica: Verifica se existe intersecção entre retângulos. A função valida se a nova caixa está estritamente à esquerda, direita, acima ou abaixo das existentes. Se nenhuma destas condições for verdadeira, assume-se que há colisão e retorna True (sobreposição detetada), sinalizando que a posição deve ser descartada.
+- Lógica: Verifica se existe intersecção entre retângulos. A função valida se a nova caixa está estritamente à esquerda, direita, acima ou abaixo das existentes. Se nenhuma destas condições for verdadeira, assume-se que há colisão e retorna True (sobreposição detetada), sinalizando que a posição deve ser descartada.
 
-__generate_dataset__
-Esta é a função central que orquestra todo o processo de criação, configurável através de parâmetros como o tamanho dos dígitos (min/max_digit_size) e a densidade de objetos (min/max_digits).
+`generate_dataset`
+Esta é a função central que orquestra todo o processo de criação, configurável através de parâmetros como o tamanho dos dígitos (_min/max_digit_size_) e a densidade de objetos (_min/max_digits_).
 
-    Configuração do Ambiente: Define a dimensão do "canvas" (fundo) como 128x128 pixéis e cria automaticamente a estrutura de diretorias para separar imagens (/images) e legendas (/_labels_), tanto para treino como para teste.
+Configuração do Ambiente: Define a dimensão do "canvas" (fundo) como 128x128 pixéis e cria automaticamente a estrutura de diretorias para separar imagens (/images) e legendas (/_labels_), tanto para treino como para teste.
 
-    Aquisição de Dados: Utiliza a biblioteca torchvision.datasets para descarregar e carregar o dataset MNIST original em memória.
+Aquisição de Dados: Utiliza a biblioteca `torchvision.datasets` para descarregar e carregar o _dataset_ MNIST original em memória.
 
-    Ciclo de Geração: Para cada imagem a ser gerada:
+Ciclo de Geração: Para cada imagem a ser gerada:
 
-        -Inicialização: Cria uma imagem vazia (preta) utilizando a biblioteca PIL (Image.new).
-        -Determinação da Complexidade: Sorteia aleatoriamente o número de dígitos a inserir na cena atual (ex.: entre 3 e 5).
-        -Processamento Individual dos Dígitos:
-            --Seleciona um dígito aleatório do MNIST.
-            --Redimensionamento: Aplica uma transformação de escala aleatória dentro dos limites definidos. Utiliza-se a interpolação bilinear (Image.BILINEAR) para redimensionar o dígito, garantindo que a imagem mantém a suavidade e não fica pixelizada ou distorcida ao ser aumentada ou diminuída.
-            --Posicionamento e Validação: Gera coordenadas aleatórias (x,y). Antes de "colar" o dígito, invoca a função check_overlap.
-            --Heurística de Tentativa: Implementa um ciclo de persistência com 20 tentativas. Se o algoritmo não encontrar um espaço livre após 20 tentativas (devido ao congestionamento da imagem), desiste de colocar esse dígito específico, evitando loops infinitos e garantindo a diversidade das cenas.
+-Inicialização: Cria uma imagem vazia (preta) utilizando a biblioteca PIL (Image.new).
 
-    Exportação:
+-Determinação da Complexidade: Sorteia aleatoriamente o número de dígitos a inserir na cena atual (ex.: entre 3 e 5).
 
-        -A imagem final é guardada em formato .jpg.
-        -As anotações são guardadas num ficheiro de texto correspondente (.txt). Cada linha representa um objeto no formato: [Classe] [X] [Y] [Largura] [Altura].
+-Processamento Individual dos Dígitos:
+--Seleciona um dígito aleatório do MNIST.
+--Redimensionamento: Aplica uma transformação de escala aleatória dentro dos limites definidos. Utiliza-se a interpolação bilinear (`Image.BILINEAR`) para redimensionar o dígito, garantindo que a imagem mantém a suavidade e não fica pixelizada ou distorcida ao ser aumentada ou diminuída.
+--Posicionamento e Validação: Gera coordenadas aleatórias (x,y). Antes de "colar" o dígito, invoca a função `check_overlap`.
+--Heurística de Tentativa: Implementa um ciclo de persistência com 20 tentativas. Se o algoritmo não encontrar um espaço livre após 20 tentativas (devido ao congestionamento da imagem), desiste de colocar esse dígito específico, evitando _loops_ infinitos e garantindo a diversidade das cenas.
 
-__main__
-No final do script, o código instancia a criação de duas versões de dataset:
-    -Versão A: Gera imagens contendo estritamente 1 dígito com tamanho fixo de 28x28 (igual ao original), mas em posição aleatória.
-    Versão D: Gera imagens complexas contendo entre 3 a 5 dígitos, onde cada dígito sofre uma variação de escala aleatória entre 22x22 e 36x36 pixéis. Esta versão testa a capacidade do modelo de lidar com múltiplas instâncias e variabilidade de tamanho.
+Exportação:
+-A imagem final é guardada em formato .jpg.
+-As anotações são guardadas num ficheiro de texto correspondente (.txt). Cada linha representa um objeto no formato: [Classe] [X] [Y] [Largura] [Altura].
+
+`__main__`
+No final do script, o código instancia a criação de duas versões de _dataset_:
+-Versão A: Gera imagens contendo estritamente 1 dígito com tamanho fixo de 28x28 (igual ao original), mas em posição aleatória.
+-Versão D: Gera imagens complexas contendo entre 3 a 5 dígitos, onde cada dígito sofre uma variação de escala aleatória entre 22x22 e 36x36 pixéis. Esta versão testa a capacidade do modelo de lidar com múltiplas instâncias e variabilidade de tamanho.
 
 
-#### 2.2. Verificação e validação (main_dataset_stats.py)
-Uma vez que o dataset é criado sinteticamente, é imperativo garantir que os dados gerados cumprem as especificações estatísticas (equilíbrio entre classes e densidade de objetos) e geométricas (precisão das bounding boxes). Este script automatiza essa verificação através de métodos analíticos e visuais.
+#### 2.2. Verificação e validação (_main_dataset_stats.py_)
+Uma vez que o _dataset_ é criado sinteticamente, é imperativo garantir que os dados gerados cumprem as especificações estatísticas (equilíbrio entre classes e densidade de objetos) e geométricas (precisão das _bounding boxes)_. Este _script_ automatiza essa verificação através de métodos analíticos e visuais.
 
-A arquitetura do código centra-se na função visualize_dataset_stats, que executa a análise em três fases distintas:
+A arquitetura do código centra-se na função `visualize_dataset_stats`, que executa a análise em três fases distintas:
 
 1. Agregação de Metadados - Numa primeira fase, o algoritmo percorre todos os ficheiros de anotação (.txt) presentes na pasta de _labels_. Esta abordagem é computacionalmente mais eficiente do que carregar as imagens, permitindo uma análise rápida mesmo em datasets com milhares de exemplos. Para cada anotação, extraem-se três vetores de informação:
-    -Classes: A identificação do dígito (0-9), permitindo verificar o equilíbrio do dataset.
+    -Classes: A identificação do dígito (0-9), permitindo verificar o equilíbrio do _dataset_.
     -Densidade: O número de linhas no ficheiro de texto, que corresponde diretamente ao número de objetos na imagem.
-    -Dimensões: A altura das bounding boxes, usada para validar se o redimensionamento aleatório (na Versão D) ocorreu conforme esperado.
+    -Dimensões: A altura das _bounding boxes_, usada para validar se o redimensionamento aleatório (na Versão D) ocorreu conforme esperado.
 
-2. Análise Estatística (Gráficos Descritivos) - Com os dados recolhidos, o script utiliza a biblioteca matplotlib para gerar um painel composto por três histogramas complementares:
+2. Análise Estatística (Gráficos Descritivos) - Com os dados recolhidos, o _script_ utiliza a biblioteca _matplotlib_ para gerar um painel composto por três histogramas complementares:
     -Frequência das Classes: Um gráfico de barras que valida se todos os dígitos (0 a 9) estão representados de forma equitativa. Um desequilíbrio aqui poderia enviesar o treino da rede neuronal futura.
     -Histograma de Densidade: Valida se o número de objetos por imagem respeita as regras da versão gerada (ex.: confirma se a Versão D contém estritamente entre 3 e 5 dígitos).
     -Distribuição de Escalas: Um histograma que mostra a variabilidade dos tamanhos dos dígitos, confirmando a média e o intervalo de redimensionamento (ex.: verificar a presença de dígitos entre 22px e 36px).
 
-3. Validação Visual (Ground Truth Mosaics) Para além das métricas abstratas, é fundamental a inspeção visual humana. O código seleciona aleatoriamente 16 imagens do dataset e gera um mosaico 4x4. Para cada imagem, o ficheiro de anotação correspondente é lido. Utilizando a biblioteca matplotlib.patches, são desenhados retângulos vermelhos (bounding boxes) sobre as coordenadas anotadas. A classe do objeto é impressa sobre a caixa (texto amarelo). Esta visualização serve como "prova de conceito", permitindo detetar erros graves como coordenadas desfasadas, caixas com tamanho incorreto ou falhas no algoritmo de anti-sobreposição que as estatísticas puras poderiam não revelar.
+3. Validação Visual (_Ground Truth Mosaics_) Para além das métricas abstratas, é fundamental a inspeção visual humana. O código seleciona aleatoriamente 16 imagens do _dataset_ e gera um mosaico 4x4. Para cada imagem, o ficheiro de anotação correspondente é lido. Utilizando a biblioteca `matplotlib.patches`, são desenhados retângulos vermelhos (_bounding boxes_) sobre as coordenadas anotadas. A classe do objeto é impressa sobre a caixa (texto amarelo). Esta visualização serve como "prova de conceito", permitindo detetar erros graves como coordenadas desfasadas, caixas com tamanho incorreto ou falhas no algoritmo de anti-sobreposição que as estatísticas puras poderiam não revelar.
 
 
-Execução e Resultados O bloco __main__ aplica esta lógica sequencialmente às pastas geradas (mnist_detection_A e mnist_detection_D), guardando os resultados como ficheiros de imagem. Isto permite uma verificação rápida e documental da qualidade dos dados antes de se avançar para a fase de treino de modelos de deteção.
+O bloco `__main__` aplica esta lógica sequencialmente às pastas geradas (**_mnist_detection_A_** e **_mnist_detection_D_**), guardando os resultados como ficheiros de imagem. Isto permite uma verificação rápida e documental da qualidade dos dados antes de se avançar para a fase de treino de modelos de deteção.
 
 ### 3. Resultados
 #### 3.1. Análise da Versão A
 
 As imagens da versão A devem conter apenas um objeto por imagem com dimensões fixas mas posições variáveis. A figura seguinte apresenta um mosaico de amostras aleatórias do conjunto criado.
 
-[Inserir imagem: mosaic_mnist_detection_A_train.png] Figura 3: Mosaico de validação visual da Versão A
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/caac103b-83bf-4de7-b8ce-939c81f83998" width="700">
+  <br>
+  <em>Figura 3: Mosaico de validação visual da Versão A.</em>
+  <br><br>
+</div>
 
 A inspeção visual confirma que o gerador posicionou corretamente os dígitos dentro da área de 128x128 pixéis. As caixas delimitadoras (bounding boxes) envolvem os dígitos com precisão, e a classe associada (texto a amarelo) corresponde ao dígito visível.
 
-As métricas globais do dataset são apresentadas na Figura 4.
+As métricas globais do _dataset_ são apresentadas na Figura 4.
 
-[Inserir imagem: stats_mnist_detection_A_train.png] Figura 4: Estatísticas da Versão A
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/73140630-2b1e-408f-8e95-674045883c70" width="900">
+  <br>
+  <em>Figura 4: Estatísticas da Versão A.</em>
+  <br><br>
+</div>
 
 A análise dos gráficos permite concluir que existe uma distribuição uniforme entre os dígitos 0 e 9, garantindo que o modelo não será enviesado para uma classe específica. O histograma central confirma o cumprimento estrito do requisito, apresentando uma barra única em N=1, indicando que 100% das imagens contêm exatamente um dígito. Já o histograma de tamanhos apresenta um pico isolado em torno dos 28 pixéis, validando a manutenção da escala original do MNIST.
 
@@ -293,23 +317,89 @@ A Versão D introduz variabilidade de escala e múltiplas instâncias, testando 
 
 A Figura 5 ilustra a complexidade das cenas geradas.
 
-[Inserir imagem: mosaic_mnist_detection_D_train.png] Figura 5: Mosaico de validação visual da Versão D
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/97ab388f-c542-4149-af58-d42480f286bf" width="700">
+  <br>
+  <em>Figura 5: Mosaico de validação visual da Versão D.</em>
+  <br><br>
+</div>
 
 Neste cenário, verifica-se a eficácia do algoritmo de verificação de colisões. Apesar da densidade elevada de objetos, as bounding boxes não se intersetam, garantindo que todos os dígitos são totalmente visíveis. É também perceptível a variação de tamanho entre os diferentes dígitos na mesma imagem.
 
 A conformidade com os parâmetros de configuração é evidenciada na Figura 6.
 
-[Inserir imagem: stats_mnist_detection_D_train.png] Figura 6: Estatísticas da Versão D
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/a32ea461-af54-4581-a7b7-3a015ec1cf55" width="900">
+  <br>
+  <em>Figura 6: Estatísticas da Versão D.</em>
+  <br><br>
+</div>
 
 A análise quantitativa demonstra que mesmo com a inserção aleatória de múltiplos objetos, o equilíbrio entre as classes (gráfico da esquerda) mantém-se estável. O histograma central confirma que todas as imagens geradas contêm entre 3 e 5 dígitos, respeitando os limites impostos. Quanto ao gráfico da direita, este exibe uma distribuição de tamanhos espalhada uniformemente pelo intervalo configurado [22px, 36px], confirmando que o redimensionamento aleatório funcionou conforme o esperado.
 
 ### 4. Conclusão
 Conclui-se, assim, que os dados gerados possuem a qualidade e a diversidade necessárias para servir de base fiável ao treino e teste de modelos de deteção de objetos nas etapas subsequentes do projeto.
 
+#
 ## Tarefa 3
 
 ### 1. Objetivo
+O objetivo desta tarefa é transitar da classificação isolada para a deteção de objetos em cenários complexos, sem a necessidade de re-treinar a rede neuronal. Para tal, implementa-se a técnica de Janela Deslizante _(Sliding Window_). Esta abordagem reutiliza o modelo convolucional (`ModelBetterCNN`), treinado na Tarefa 1, para varrer as imagens geradas na Tarefa 2, classificando recortes locais e identificando a presença e localização dos dígitos no espaço.
 
+### 2. Metodologia
+O código desenvolvido (`main_sliding_window.py`) orquestra o processo de deteção através de três componentes lógicos fundamentais: o algoritmo de varrimento (`detect_and_save`), a filtragem de resultados (`nms`) e o processamento em lote (`process_full_dataset`).
+
+`detect_and_save`
+Esta função trata do processamento da imagem, seguindo os passos apresentados de seguida:
+- Varrimento (_Sliding Window_): Percorre a imagem (128x128) com uma janela de tamanho fixo de 28x28 pixéis (dimensão nativa do modelo), aplicando um passo (_stride_) de 6 pixéis.
+- Otimização de pré-processamento: Para evitar classificar zonas de fundo irrelevantes (preto absoluto), implementou-se uma verificação de desvio padrão (`crop_tensor.std() < 0.1`). Se o recorte for uniforme (vazio), é ignorado imediatamente, poupando recursos computacionais.
+- Os recortes válidos são submetidos ao modelo (`ModelBetterCNN`). Apenas as previsões com um grau de confiança extremamente elevado (> 98%) são consideradas, minimizando falsos positivos.
+- Visualização: Após a aplicação do NMS, as caixas finais são desenhadas sobre a imagem original utilizando a biblioteca matplotlib, indicando a classe prevista e a probabilidade associada.
+
+`nms`
+Ao aplicar a técnica de janela deslizante, esta gera múltiplas deteções redundantes para o mesmo objeto (várias caixas sobrepostas em torno do mesmo dígito). Para resolver este problema, implementou-se a função NMS (_Non-Maximum Suppression_)
+O algoritmo ordena todas as caixas detetadas pela sua probabilidade (confiança). Seleciona a caixa com maior _score_ e elimina todas as outras que tenham uma sobreposição significativa com esta.
+A sobreposição é calculada através da IoU (_Intersection over Union_). Se a IoU for superior a um limiar de 0.2 (definido na chamada da função), considera-se que as caixas referem-se ao mesmo objeto e a redundante é descartada.
+
+`process_full_dataset`
+A função principal gere a execução sistemática do detetor nas diferentes versões do _dataset_ criado anteriormente.
+O sistema carrega o estado do modelo "_Best Checkpoint_" da Tarefa 1, garantindo que o detetor utiliza a versão mais precisa da rede. Posteriormente, o código processa automaticamente as pastas de teste das versões 'A' e 'D', limitando a execução a 20 imagens por versão para uma validação rápida. As imagens resultantes, contendo as _bounding boxes_ e as etiquetas, são guardadas numa diretoria dedicada (Tarefa_3_Results), permitindo uma inspeção visual posterior da eficácia do algoritmo.
+
+### 3. Resultados
+#### 3.1. Resultados da versão A
+Os resultados foram visualmente analisados de modo a compreender a eficácia do método da janela deslizante. É percetível nos resultados a tendência deste método a classificar apenas frações dos dígitos como um dígito em si, tipicamento como '1'. Ainda assim, em muitos dos casos o método foi capaz de identificar o dígito presente na imagem. É possível verificar casos com pouco ruído (deteções de dígitos que não existem na imagem), contendo apenas 2 deteções extras, no entanto, há também exemplos que apresentam imenso ruído, tornando inclusive difícil a identificação da _bounding box_ correspondente à deteção correta.
+Em escassas situações, o método não foi capaz de identificar o dígito presente na imagem, identificando apenas dígitos provenientes de frações do dígito real.
+
+
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/a32ea461-af54-4581-a7b7-3a015ec1cf55" width="900">
+  <br>
+  <em>Figura 6: Estatísticas da Versão D.</em>
+  <br><br>
+</div>
+
+![result_scene_00011](https://github.com/user-attachments/assets/f1059c7c-0632-4055-b0a6-538731a5ccec)
+![result_scene_00018](https://github.com/user-attachments/assets/c87417be-5b05-43da-a144-a7e7e5eeb3c8)
+
+
+exemplos maus:
+![result_scene_00006](https://github.com/user-attachments/assets/b2821c9b-e9ac-4b3e-bc4a-b96f6a285e3a)
+![result_scene_00015](https://github.com/user-attachments/assets/76e6e576-b209-4eec-9b94-6871be2e868f)
+
+
+#### 3.2. Resultados da versão D
+Na versão D, onde cada imagem é composta por mais que um dígito, torna-se ainda mais frequente a identificação de dígitos falsos através de fragmentos dos dígitos reais. Isto resulta num elevado ruído presente em maior parte das imagens. São vários os exemplos onde o método não foi capaz de identificar todos os dígitos, sobretudo em imagens com 5 dígitos. 
+
+![result_scene_00016](https://github.com/user-attachments/assets/39810d24-b00f-4442-83f5-2443b835ff06)
+![result_scene_00018](https://github.com/user-attachments/assets/a97a1f4a-a8f9-4f91-b234-0aa0aebf4ce6)
+
+exemplo mau:
+![result_scene_00001](https://github.com/user-attachments/assets/f8cddd79-4177-4466-a11f-2a141bd533e2)
+![result_scene_00004](https://github.com/user-attachments/assets/f35fca0e-7ea0-4050-988a-cff61dc33853)
+![result_scene_00012](https://github.com/user-attachments/assets/1fec6b83-d4aa-4f98-b182-9bc5951783c0)
+
+### 4. Conclusão
+Através dos resultados obtidos verifica-se que o método embora seja capaz de detetar maior parte dos dígitos, devido ao ruído que gera, não é um bom método para identificação de objetos. O método da janela deslizante teria de sofrer melhorias consideráveis para produzir resulatos favoráveis.
 
 ## Tarefa 4
 
