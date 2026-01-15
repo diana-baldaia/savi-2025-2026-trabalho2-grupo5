@@ -160,6 +160,7 @@ class ComplexSceneDataset(Dataset):
         
         return crop, label
 
+
 # ==========================================
 # TREINO DO MODELO
 # ==========================================
