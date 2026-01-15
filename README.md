@@ -410,15 +410,151 @@ A Tarefa 4 visa refinar o sistema de deteção desenvolvido anteriormente, ataca
 - Abordagem Multi-Escala: O algoritmo passa a varrer a imagem com janelas de diferentes tamanhos, garantindo que objetos maiores ou menores que o padrão sejam capturados corretamente.
 
 ### 2. Metodologia
-O código (`main_improved_detection.py`) apresenta uma evolução significativa face à Tarefa 3, introduzindo lógica avançada tanto na preparação dos dados como no pós-processamento. É composto por duas classes, `ModelImproved` que define a arquitetura do modelo e `ComplexSceneDataset` que cria o _dataset_ melhorado. Contém ainda funções que definem o treino, funções que filtram os resultados e funções para a avaliação do modelo.
+O código (`main_improved_detection.py`) apresenta uma evolução significativa face à Tarefa 3, introduzindo lógica avançada tanto na preparação dos dados como no pós-processamento. É composto por duas classes, `ModelImproved` que define a arquitetura do modelo e `ComplexSceneDataset` que "cria" o _dataset_ melhorado. Contém ainda funções que definem o treino, funções que filtram os resultados e funções para a avaliação do modelo.
 
-#### 2.1. 
+#### 2.1. Arquitetura da Rede (_ModelImproved_)
+A classe _ModelImproved_ representa uma evolução da arquitetura CNN utilizada nas tarefas anteriores. Embora mantenha a filosofia de extração de características hierárquica, esta versão foi ligeiramente compactada e ajustada para o problema de classificação de 11 classes (10 dígitos + 1 classe de "Fundo/Ruído").
+A classe herda de _nn.Module_ e estrutura-se fundamentalmente em duas funções:
+
+`__init__` 
+Esta função define os blocos construtivos da rede, inicializando as camadas com parâmetros treináveis.
+
+- Bloco Convolucional 1 (conv1, bn1):
+-- `nn.Conv2d(1, 32, ...)`: A entrada é uma imagem em tons de cinza (1 canal). A camada aplica 32 filtros distintos para extrair características de baixo nível (arestas, curvas). O `padding=1` garante que a dimensão espacial se mantém (28x28).
+-- `nn.BatchNorm2d(32)`: Normaliza as saídas dos 32 canais, estabilizando o treino e permitindo taxas de aprendizagem mais altas.
+
+- Bloco Convolucional 2 (conv2, bn2):
+-- `nn.Conv2d(32, 32, ...)`: Refina as características extraídas anteriormente. Mantém-se a profundidade de 32 mapas de características.
+-- `nn.BatchNorm2d(32)`: Nova normalização para garantir a estabilidade do sinal em profundidade.
+
+- Camadas de Processamento e Regularização:
+-- `nn.MaxPool2d(2, 2)`: Reduz a dimensionalidade espacial para metade (de 28x28 para 14x14), condensando a informação e reduzindo o custo computacional.
+-- `nn.Dropout(0.25)`: "Desliga" aleatoriamente 25% dos neurónios durante o treino. Esta técnica é essencial para evitar o _Overfitting_, forçando a rede a não depender de caminhos neuronais específicos.
+
+- Classificador _Densen_ (fc1, fc2):
+-- `nn.Linear(32 * 14 * 14, 128)`: A camada de entrada recebe o tensor "achatado". O valor 32×14×14 corresponde ao volume total de dados que saem da camada de _Pooling_. Estes são projetados para 128 neurónios.
+-- `nn.Linear(128, 11)`: A camada final possui agora 11 saídas em vez de 10. As primeiras 10 correspondem aos dígitos (0-9) e a 11.ª saída (índice 10) representa a classe "Fundo". Isto permite ao modelo aprender explicitamente a rejeitar imagens que não contêm dígitos completos.
+
+`forward` 
+Esta função define o fluxo de dados durante a inferência e treino.
+A entrada x passa sequencialmente pelas camadas convolucionais. Em cada etapa, aplica-se a função de ativação não-linear _ReLU_ após a normalização (Convolução → _Batch Norm_ → _ReLU_).
+Após o segundo bloco convolucional, os dados passam pelo `MaxPool2d` (reduzindo o tamanho) e pelo `Dropout`. A instrução `x.view(x.size(0), -1)` transforma os mapas de características 3D (Batch, 32, 14, 14) num vetor 1D, compatível com as camadas densas. 
+O vetor passa então pela primeira camada densa (fc1) com ativação _ReLU_. Finalmente, a camada fc2 projeta o resultado nas 11 classes possíveis (_logits_), sem função de ativação explícita no final (pois a função de perda `CrossEntropyLoss` usada no treino já aplica internamente o _Softmax_).
+
+#### 2.2. Gestão do _Dataset_ (_ComplexSceneDataset_)
+Esta classe substitui a abordagem simples de carregar imagens inteiras por uma estratégia de amostragem dinâmica. Em vez de fornecer a imagem completa de 128x128 pixéis à rede, esta classe recorta pequenas janelas de 28x28 pixéis, classificando-as de acordo com o seu conteúdo. Este processo é fundamental para ensinar a rede a distinguir não apenas "dígito" de "fundo", mas também "dígito completo" de "fragmento de dígito".
+
+A classe estrutura-se em dois métodos principais:
+
+`__init__` e `__len__`
+Estas funções configuram o acesso aos ficheiros e definem a dimensão virtual do dataset.
+- Localiza todas as imagens de treino (.jpg) e prepara o acesso às respetivas anotações (.txt).
+- Ao retornar `len(self.image_files) * 15`, o _dataset_ "finge" ser 15 vezes maior do que o número de imagens físicas. Isto garante que, em cada época, a rede vê 15 recortes diferentes extraídos da mesma imagem original, aumentando drasticamente a diversidade de treino sem necessitar de mais dados brutos.
+
+`__getitem__`
+Para cada pedido de dados, o algoritmo carrega a imagem original e as bounding boxes reais ("_Ground Truth_") e decide probabilisticamente que tipo de exemplo gerar:
+
+- Exemplos Positivos (40% de probabilidade):
+-- O sistema seleciona aleatoriamente uma das caixas de dígitos presentes na imagem.
+-- Aplica-se um pequeno deslocamento aleatório (_jitter_) ao centro do recorte (±2 pixéis). Isto torna a rede robusta a pequenos erros de centralização durante a deteção real.
+-- O recorte resultante recebe a etiqueta (_label_) correta do dígito (0-9).
+
+- _Hard Negatives_ (30% de probabilidade):
+-- Esta é a componente crítica para a redução de falsos positivos. O algoritmo seleciona um dígito real, mas força propositadamente um recorte deslocado (desvio de ±10 pixéis).
+-- O resultado é uma imagem que contém apenas uma fração do dígito (ex.: apenas a curva superior de um '8' ou a barra vertical de um '7').
+-- A este recorte é atribuída a etiqueta 10 (Fundo). Isto força a rede neuronal a aprender que "meio dígito" não serve; ela deve penalizar ativações em zonas que não contenham o objeto na sua totalidade.
+
+- Fundo Puro (30% de probabilidade):
+-- O algoritmo procura uma região da imagem que não intersete significativamente nenhuma _bounding box_ de dígitos.
+-- Caso encontre (após 20 tentativas), extrai esse recorte de espaço vazio.
+-- Atribui-se a etiqueta 10 (Fundo), reforçando o conhecimento do que é vazio.
+
+Este equilíbrio probabilístico (40/30/30) garante que o modelo é exposto a uma variedade de exemplos equilibrados, resultando num classificador muito mais discriminativo.
+
+#### 2.3. Ciclo de Treino (_train_robot_)
+A função `train_robot` operacionaliza o ciclo de treino, estabelecendo a ponte entre a arquitetura da rede (_ModelImproved_) e a estratégia de dados dinâmicos (_ComplexSceneDataset_). Diferente do treino simples da Tarefa 1, este foi ajustado para lidar com a complexidade acrescida da rejeição de fundo e fragmentos.
+
+O dataset é encapsulado num _DataLoader_ com `batch_size=64` e `shuffle=True`. O parâmetro _shuffle_ é crucial uma vez que, como o _dataset_ gera exemplos probabilísticos (positivos/negativos/fundo), baralhar os dados garante que cada lote contém uma mistura representativa de todas as situações, estabilizando o cálculo do gradiente. Mantém-se o algoritmo _Adam_ (lr=0.001) e define-se a nn.CrossEntropyLoss como função perda. Esta função é adequada para classificação multi-classe, lidando agora com as 11 classes possíveis (0-9 + Fundo). Ela penaliza o modelo não apenas por errar o dígito, mas por confundir "fundo" com "dígito".
+
+O ciclo de treino possui 5 épocas. Devido à natureza dinâmica do _dataset_ (que gera recortes diferentes a cada acesso), mais épocas significam que a rede é exposta a uma maior variabilidade de exemplos "difíceis" (_Hard Negatives_), refinando progressivamente a sua fronteira de decisão.
+Dentro do _loop_, executa-se:
+- _Forward Pass_: A rede processa o lote de imagens.
+- _Loss_: Calcula-se o erro entre a previsão e a etiqueta real.
+- _Backward Pass_: `loss.backward()` calcula os gradientes (as correções necessárias para os pesos).
+- _Weight Update_: `optimizer.step()` aplica as correções.
+
+Ao final do processo, os pesos otimizados da rede são guardados no ficheiro _best_improved.pkl_. Este ficheiro guarda o "conhecimento" adquirido pelo modelo sobre como distinguir dígitos completos de fundo e fragmentos, ficando pronto para a fase de teste.
+
+#### 2.4. Filtragem e Validação
+O sucesso da abordagem multi-escala depende inteiramente da capacidade de filtrar o excesso de caixas geradas. Como o modelo varre a imagem com janelas de 28, 36 e 48 pixéis, é comum que o mesmo dígito seja detetado múltiplas vezes e em tamanhos diferentes. O conjunto de funções abaixo implementa a lógica necessária para consolidar estas previsões numa única deteção coerente.
+
+`calculate_iou`
+Esta função implementa a métrica Intersection over Union (IoU).
+O seu objetivo è quantificar geometricamente o quanto duas caixas (box1 e box2) partilham o mesmo espaço. Para tal, determina-se a área do retângulo de interseção (onde as caixas se cruzam) e divide-se pela área da união (a área total ocupada por ambas). O resultado é um valor entre 0 (sem contacto) e 1 (sobreposição perfeita). Este valor é utilizado como critério primário para identificar deteções duplicadas do mesmo objeto.
+
+`is_contained` 
+Esta função introduz uma regra de filtragem específica para lidar com problemas de escala, onde o IoU tradicional falha.
+Em deteção multi-escala, uma janela pequena pode detetar corretamente uma parte de um número (ex: o círculo superior de um '8') enquanto uma janela grande deteta o '8' completo. A área de união entre elas é grande (corresponde à àrea da caixa maior) enquanto que a àrea de interseção será apenas a àrea da caixa menor, resultando num IoU baixo, o que impediria o NMS normal de eliminar a caixa pequena.
+
+Assim, esta função verifica se uma caixa (_inner_box_) está substancialmente contida dentro de outra (_outer_box_). Para tal calcula-se a interseção e divide-se pela área da caixa menor. Se mais de 80% da caixa menor estiver dentro da maior, a função retorna True. Isto sinaliza ao sistema que a caixa pequena é redundante e deve ser suprimida em favor da deteção maior e mais completa.
+
+`advanced_nms` 
+Esta é a função que combina as métricas anteriores para limpar os resultados brutos. Diferente do NMS clássico, esta versão considera tanto a sobreposição como a contenção.
+
+O algoritmo começa por ordenar todas as caixas detetadas pela probabilidade dada pelo modelo (_score_), da maior para a menor. Assume-se que a caixa com maior confiança é a "correta". Posteriormente, esta é comparada com todas as outras restantes na lista (candidatas). Uma caixa candidata é eliminada se se verificar qualquer uma das seguintes condições:
+- Alta Sobreposição: Tem um IoU superior ao limiar definido (0.2) com a caixa "correta".
+- Contenção: Está contida dentro da caixa "correta" (ou vice-versa), indicando que é um fragmento ou uma deteção concêntrica redundante.
+
+Este processo repete-se iterativamente até restarem apenas as deteções únicas e não sobrepostas.
+
+`check_hit_advanced`
+Esta função é responsável pela avaliação de desempenho, verificando se uma previsão corresponde à realidade (_Ground Truth_).
+Esta função utiliza uma abordagem baseada no centroide da caixa prevista e na caixa real. Assim, calcula-se o ponto central da caixa prevista (pcx, pcy) e considera-se um "_Hit_" (Verdadeiro Positivo) se:
+- O centro da caixa prevista cair geometricamente dentro de uma caixa real.
+- A classe prevista (ex: dígito '3') for igual à classe real anotada.
+
+Esta função retorna o índice da caixa real encontrada ou -1 em caso de erro (Falso Positivo), permitindo a contagem precisa para o cálculo da Precisão e _Recall_.
+
+#### 2.5. Avaliação (_test_robot_metrics_)
+A função `test_robot_metrics` trata da avaliação final do modelo em questão. Aqui o modelo percorre imagens desconhecidas, deteta objetos de vários tamanhos e fornece métricas quantitativas de desempenho. Diferente das funções de avaliação anteriores, esta integra a lógica Multi-Escala.
+
+O fluxo de processamento divide-se em três etapas lógicas:
+- Varredura Multi-Escala: A função percorre a imagem com janelas de 3 escalas distintas, SCALES = [28, 36, 48], percorrendo a totalidade da imagem 3 vezes. Como a rede neuronal (_ModelImproved_) tem uma entrada fixa de 28x28 pixéis, qualquer recorte extraído (seja ele de 36px ou 48px) é imediatamente redimensionado para 28x28 usando interpolação bilinear. Isto permite que a rede "veja" e classifique objetos grandes utilizando a mesma arquitetura de pesos aprendida.
+- Previsão e Verificação: Para cada recorte extraído nas várias escalas, o modelo emite uma previsão. A primeira verificação é a classe prevista. Se o modelo classificar o recorte como Classe 10 (Fundo), a deteção é imediatamente descartada. Para além disso, apenas previsões onde a rede tem mais de 98% de certeza são aceites. Este rigor é necessário para minimizar os falsos positivos.
+- Consolidação e Cálculo de Métricas: Após recolher todas as deteções "brutas" das três escalas, a função invoca o `advanced_nms` para fundir as caixas redundantes. De seguida, compara as deteções finais com o _Ground Truth_ para calcular as métricas de Precisão, Recall e F1-Score
+
+Finalmente, a função gera visualizações qualitativas (desenhando as caixas verdes sobre as imagens), permitindo ao utilizador validar visualmente se a estratégia multi-escala está a funcionar corretamente (ex.: verificar se um dígito grande está a ser envolvido por uma caixa grande e não por várias pequenas).
+
 
 ### 3. Resultados
+A avaliação do sistema otimizado foi realizada num subconjunto de 200 imagens de teste da Versão D. Os resultados quantitativos e qualitativos demonstram a eficácia das técnicas de _Hard Negative Mining_ e deteção multi-escala.
 
+A tabela seguinte resume as métricas obtidas.
+
+Métrica	Valor Obtido	Significado
+Total de Deteções	637	Número de caixas geradas pelo modelo após filtragem.
+Deteções Corretas	621	Número de caixas que correspondem a dígitos reais (True Positives).
+Precisão	97.49%	De tudo o que o modelo detetou, 97.5% eram realmente dígitos.
+Recall	78.21%	De todos os dígitos existentes, o modelo encontrou 78.2%.
+F1-Score	86.79%	Média harmónica, indicando o equilíbrio global do sistema.
+
+Estes valores demonstram uma elevada precisão (97.49%), indicando que a estratégia de _Hard Negative Mining_ foi extremamente bem-sucedida. O modelo aprendeu eficazmente a rejeitar "ruído" (fundo e fragmentos de dígitos), gerando muito poucos falsos positivos (apenas 16 erros em 637 deteções). Já o valor da sensibilidade (78.21%) é uma consequência de um _threshold_ elevado (> 0.98). Este threshold foi definido para garantir uma precisão elevada. Isto significa que o modelo opta por "ignorar" dígitos ambíguos ou difíceis em vez de arriscar uma classificação errada.
+
+Já a figura abaixo apresenta exemplos visuais das deteções finais.
+
+[Inserir imagem: final_metrics_visualization.png] Figura 11: Resultados visuais na Versão D. As caixas verdes indicam deteções com confiança > 98%.
+
+A inspeção visual corrobora os dados numéricos. Ao contrário da abordagem de Janela Deslizante simples (Tarefa 3), não se observam múltiplas caixas a rodear o mesmo objeto. O NMS Avançado eliminou eficazmente as redundâncias.
+O sistema demonstra ainda capacidade de detetar corretamente tanto dígitos pequenos (ex.: o '1' na quarta imagem) como dígitos maiores, validando a abordagem multi-escalas (28px, 36px, 48px).
+Nas amostras apresentadas, não existem caixas desenhadas em zonas vazias ou que contenham apenas fragmentos dos números, confirmando que a classe "Fundo" (Classe 10) foi bem treinada.
 
 ### 4. Conclusão
-
+Em conclusão, o sistema evoluiu de um detetor rudimentar e cheio de falhas para uma solução robusta e precisa, ideal para aplicações onde o custo de um falso positivo é elevado.
 
 #
 ## Reflexão
+O projeto desenvolvido percorreu o ciclo fundamental de um sistema de Visão Computacional, evoluindo da classificação de dígitos isolados (Tarefa 1) para a deteção de objetos em cenários complexos (Tarefa 4). Esta progressão permitiu validar a eficácia das CNNs, mas expôs simultaneamente as limitações das abordagens clássicas de deteção.
+
+É de notar que a arquitetura do modelo _ModelBetterCNN_ é insuficiente sem uma estratégia de gestão de dados robusta. A Tarefa 1 comprovou a utilidade do _Batch Normalization_ e _Dropout_. Contudo a implementação de _Hard Negative Mining_ na Tarefa 4 foi o fator decisivo, elevando a precisão para 97.5% ao forçar a rede a distinguir ativamente entre dígitos completos, fragmentos e fundo.
+
+A implementação do pós-processamento apresentou os maiores desafios técnicos, entre os quais a remoção de caixas redundantes na Tarefa 3 e a obtenção e calibragem dos filtros de rejeição na Tarefa 4. Quanto à Tarefa 3, o problema não foi totalmente resolvido, sendo possível verificar a presença de imenso ruído nas imagens exemplo resultantes. Já na Tarefa 4, foi possível resolver o problema do ruído e dos falsos positivos mas abdicando da deteção de dígitos nos quais a rede tinha "baixa" confiança, resultando num baixo _Recall_, em prol de um _F1-Score_ equilibrado.
