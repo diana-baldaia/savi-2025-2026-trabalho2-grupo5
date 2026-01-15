@@ -146,7 +146,7 @@ def visualize_dataset_stats(root_folder, dataset_name, split_name='train'):
 
 if __name__ == "__main__":
     
-    root_path = '/home/baldaia/Desktop/savi-2025-2026-trabalho2-grupo5/Tarefa_2/' 
+    root_path = '/home/baldaia/Desktop/savi-2025-2026-trabalho2-grupo6/Tarefa_2/' 
     
     # 1. Analisar a Versão A (Fácil)
     # Deve mostrar: 1 dígito por imagem, classes equilibradas, tamanho fixo.

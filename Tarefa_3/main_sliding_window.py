@@ -156,8 +156,8 @@ def process_full_dataset(base_data_path, model_path, versions=['A', 'D'], num_im
 
 if __name__ == "__main__":
     # CONFIGURAÇÕES
-    MODEL_FILE = '/home/baldaia/Desktop/savi-2025-2026-trabalho2-grupo5/Tarefa_1/Experiments_MBCNN/best.pkl' # Caminho do teu modelo
-    DATASET_PATH = '/home/baldaia/Desktop/savi-2025-2026-trabalho2-grupo5/Tarefa_2'                         # Pasta onde estão as subpastas mnist_detection_X
+    MODEL_FILE = '/home/baldaia/Desktop/savi-2025-2026-trabalho2-grupo6/Tarefa_1/Experiments_MBCNN/best.pkl' # Caminho do teu modelo
+    DATASET_PATH = '/home/baldaia/Desktop/savi-2025-2026-trabalho2-grupo6/Tarefa_2'                         # Pasta onde estão as subpastas mnist_detection_X
 
     # Corre para todas as versões, processando 20 imagens de cada para teste rápido
     process_full_dataset(DATASET_PATH, MODEL_FILE, versions=['A', 'D'], num_images_per_ver=20)

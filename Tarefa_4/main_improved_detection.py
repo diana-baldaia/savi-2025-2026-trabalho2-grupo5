@@ -413,7 +413,7 @@ def test_robot_metrics(root_path, model_path, dataset_name='Tarefa_2/mnist_detec
     plt.show()
 
 if __name__ == "__main__":
-    root = '/home/baldaia/Desktop/savi-2025-2026-trabalho2-grupo5/' 
+    root = '/home/baldaia/Desktop/savi-2025-2026-trabalho2-grupo6/' 
     
     # IMPORTANTE: VOLTA A TREINAR (Descomenta) para aprender os Hard Negatives!
     # model_path = train_robot(root, dataset_name='Tarefa_2/mnist_detection_D')

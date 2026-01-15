@@ -35,7 +35,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-df', '--dataset_folder', type=str,
-                        default='/home/baldaia/Desktop/savi-2025-2026-trabalho2-grupo5/savi_datasets')
+                        default='/home/baldaia/Desktop/savi-2025-2026-trabalho2-grupo6/savi_datasets')
     parser.add_argument('-pe', '--percentage_examples', type=float, default=1,
                         help='Percentage of examples to use for training and testing')
     parser.add_argument('-ne', '--num_epochs', type=int, default=10,
@@ -43,7 +43,7 @@ def main():
     parser.add_argument('-bs', '--batch_size', type=int, default=64,
                         help='Batch size for training and testing.')
     parser.add_argument('-ep', '--experiment_path', type=str,
-                        default='/home/baldaia/Desktop/savi-2025-2026-trabalho2-grupo5/Tarefa_1/Experiments_MBCNN',
+                        default='/home/baldaia/Desktop/savi-2025-2026-trabalho2-grupo6/Tarefa_1/Experiments_MBCNN',
                         help='Path to save experiment results.')
     parser.add_argument('-rt', '--resume_training', action='store_true',
                         help='Resume training from last checkpoint if available.')

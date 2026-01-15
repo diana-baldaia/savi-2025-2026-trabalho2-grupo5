@@ -111,7 +111,7 @@ def generate_dataset(root_folder, dataset_name, num_images, is_train=True,
 if __name__ == "__main__":
     
     # Define a pasta base
-    root_path = '/home/baldaia/Desktop/savi-2025-2026-trabalho2-grupo5/Tarefa_2' 
+    root_path = '/home/baldaia/Desktop/savi-2025-2026-trabalho2-grupo6/Tarefa_2' 
     
     # --- GERAR VERSÃO A (FÁCIL) ---
     # Requisito: 1 dígito, posição aleatória (tamanho fixo ou pouco variável)
